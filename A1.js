@@ -55,8 +55,13 @@ function inverseMat(m){
 
 function idMat4() {
     // Create Identity matrix
-    // TODO
+
+    // A VERIFIER
     var m = new THREE.Matrix4();
+    m.set(1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1);
     return m;
 }
 
@@ -65,8 +70,36 @@ function translateMat(matrix, x, y, z) {
     // matrix: THREE.Matrix4
     // x, y, z: float
 
-    // TODO
+    // A VERIFIER
     var m = new THREE.Matrix4();
+    m.set(1, 0, 0, x,
+        0, 1, 0, y,
+        0, 0, 1, z,
+        0, 0, 0, 1);
+
+    m.multiply(matrix);
+    return m;
+}
+
+function rotationMatrice(angle, axis) {
+    var m = new THREE.Matrix3();
+    switch (axis) {
+        case "x":{
+            m.set(  1,    0,                  0,
+                0,    Math.cos(angle),    -1*Math.sin(angle),
+                0,    Math.sin(angle),    Math.cos(angle))
+        }
+        case "y":{
+            m.set(  Math.cos(angle),        0,      Math.sin(angle),
+                0,                      1,      0,
+                -1*Math.sin(angle),     0,      Math.cos(angle))
+        }
+        case "z":{
+            m.set(  Math.cos(angle),    -1*Math.sin(angle),    0,
+                Math.sin(angle),    Math.cos(angle),       0,
+                0,                  0,                     1)
+        }
+    }
     return m;
 }
 
@@ -74,9 +107,12 @@ function rotateMat(matrix, angle, axis){
     // Apply rotation by @angle with respect to @axis to @matrix
     // matrix: THREE.Matrix3
     // angle: float
-    // axis: string "x", "y" or "z"
+    // axis: string "x", "y" or "z
 
-    // TODO
+    // A VERIFIER
+    var m = rotationMatrice(angle, axis);
+    m.multiply(matrix);
+    return m;
 }
 
 function rotateVec3(v, angle, axis){
@@ -85,7 +121,9 @@ function rotateVec3(v, angle, axis){
     // angle: float
     // axis: string "x", "y" or "z"
 
-    // TODO
+    var m = rotationMatrice(angle, axis);
+    m.multiply(v);
+    return m;
 }
 
 function rescaleMat(matrix, x, y, z){
@@ -93,7 +131,14 @@ function rescaleMat(matrix, x, y, z){
     // matrix: THREE.Matrix3
     // x, y, z: float
 
-    // TODO
+    var m = THREE.Matrix3();
+
+    m.set(x, 0, 0,
+        0, y, 0,
+        0, 0, z)
+
+    m.multiply(matrix);
+    return m;
 }
 
 class Robot {
