@@ -1,7 +1,7 @@
 // ASSIGNMENT-SPECIFIC API EXTENSION
 THREE.Object3D.prototype.setMatrix = function(a) {
-    this.matrix = a;
-    this.matrix.decompose(this.position, this.quaternion, this.scale);
+  this.matrix = a;
+  this.matrix.decompose(this.position, this.quaternion, this.scale);
 };
 
 var start = Date.now();
@@ -23,9 +23,9 @@ controls.damping = 0.2;
 
 // ADAPT TO WINDOW RESIZE
 function resize() {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 }
 
 window.addEventListener('resize', resize);
@@ -46,215 +46,228 @@ scene.add(floor);
 // TRANSFORMATIONS
 
 function multMat(m1, m2){
-    return new THREE.Matrix4().multiplyMatrices(m1, m2);
+  return new THREE.Matrix4().multiplyMatrices(m1, m2);
 }
+
 
 function inverseMat(m){
-    return new THREE.Matrix4().getInverse(m, true);
+  return new THREE.Matrix4().getInverse(m, true);
 }
 
-function idMat4() {
-    // Create Identity matrix
 
-    // A VERIFIER
-    var m = new THREE.Matrix4();
-    m.set(1, 0, 0, 0,
+
+function idMat4() {
+  // Create Identity matrix
+  // TODO
+  var m = new THREE.Matrix4();
+  m.set(
+        1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
-        0, 0, 0, 1);
-    return m;
+        0, 0, 0, 1
+      );
+  return m;
 }
 
 function translateMat(matrix, x, y, z) {
-    // Apply translation [x, y, z] to @matrix
-    // matrix: THREE.Matrix4
-    // x, y, z: float
+  // Apply translation [x, y, z] to @matrix
+  // matrix: THREE.Matrix4
+  // x, y, z: float
 
-    // A VERIFIER
-    var m = new THREE.Matrix4();
-    m.set(1, 0, 0, x,
+  // TODO
+  var m = new THREE.Matrix4();
+  m.set(
+        1, 0, 0, x,
         0, 1, 0, y,
         0, 0, 1, z,
         0, 0, 0, 1);
-
-    m.multiply(matrix);
-    return m;
+  m = multMat(m, matrix);
+  return m;
 }
 
-function rotationMatrice(angle, axis) {
-    var m = new THREE.Matrix3();
+function getRotationMatrix(angle, axis) {
+    var m = new THREE.Matrix4();
     switch (axis) {
-        case "x":{
-            m.set(  1,    0,                  0,
-                0,    Math.cos(angle),    -1*Math.sin(angle),
-                0,    Math.sin(angle),    Math.cos(angle))
+        case "x": {
+            m.set(
+                1, 0, 0, 0,
+                0, Math.cos(angle), -1 * Math.sin(angle), 0,
+                0, Math.sin(angle), Math.cos(angle), 0,
+                0, 0, 0, 1
+            );
+            break;
         }
-        case "y":{
-            m.set(  Math.cos(angle),        0,      Math.sin(angle),
-                0,                      1,      0,
-                -1*Math.sin(angle),     0,      Math.cos(angle))
+        case "y": {
+            m.set(
+                Math.cos(angle), 0, Math.sin(angle), 0,
+                0, 1, 0, 0,
+                -1 * Math.sin(angle), 0, Math.cos(angle), 0,
+                0, 0, 0, 1
+            );
+            break;
         }
-        case "z":{
-            m.set(  Math.cos(angle),    -1*Math.sin(angle),    0,
-                Math.sin(angle),    Math.cos(angle),       0,
-                0,                  0,                     1)
+        case "z": {
+            m.set(
+                Math.cos(angle), -1 * Math.sin(angle), 0, 0,
+                Math.sin(angle), Math.cos(angle), 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            );
+            break;
         }
     }
     return m;
 }
 
 function rotateMat(matrix, angle, axis){
-    // Apply rotation by @angle with respect to @axis to @matrix
-    // matrix: THREE.Matrix3
-    // angle: float
-    // axis: string "x", "y" or "z
+  // Apply rotation by @angle with respect to @axis to @matrix
+  // matrix: THREE.Matrix3
+  // angle: float
+  // axis: string "x", "y" or "z"
+    return multMat(getRotationMatrix(angle, axis), matrix);
 
-    // A VERIFIER
-    var m = rotationMatrice(angle, axis);
-    m.multiply(matrix);
-    return m;
 }
 
 function rotateVec3(v, angle, axis){
-    // Apply rotation by @angle with respect to @axis to vector @v
-    // v: THREE.Vector3
-    // angle: float
-    // axis: string "x", "y" or "z"
-
-    var m = rotationMatrice(angle, axis);
-    m.multiply(v);
-    return m;
+  // Apply rotation by @angle with respect to @axis to vector @v
+  // v: THREE.Vector3
+  // angle: float
+  // axis: string "x", "y" or "z"
+  
+  // TODO
+    var m = getRotationMatrix(angle, axis);
+    return v.applyMatrix4(m);
 }
 
 function rescaleMat(matrix, x, y, z){
-    // Apply scaling @x, @y and @z to @matrix
-    // matrix: THREE.Matrix3
-    // x, y, z: float
+  // Apply scaling @x, @y and @z to @matrix
+  // matrix: THREE.Matrix3
+  // x, y, z: float
 
-    var m = THREE.Matrix3();
-
-    m.set(x, 0, 0,
+    var m = new THREE.Matrix3();
+    m.set(
+        x, 0, 0,
         0, y, 0,
-        0, 0, z)
-
-    m.multiply(matrix);
+        0, 0, z
+    );
+    m = multMat(m, matrix);
     return m;
 }
 
 class Robot {
-    constructor() {
-        // Geometry
-        this.torsoHeight = 1.5;
-        this.torsoRadius = 0.75;
-        this.headRadius = 0.32;
-        // Add parameters for parts
-        // TODO
-
-        // Animation
-        this.walkDirection = new THREE.Vector3( 0, 0, 1 );
-
-        // Material
-        this.material = new THREE.MeshNormalMaterial();
-
-        // Initial pose
-        this.initialize()
-    }
-
-    initialTorsoMatrix(){
-        var initialTorsoMatrix = idMat4();
-        initialTorsoMatrix = translateMat(initialTorsoMatrix, 0,this.torsoHeight/2, 0);
-
-        return initialTorsoMatrix;
-    }
-
-    initialHeadMatrix(){
-        var initialHeadMatrix = idMat4();
-        initialHeadMatrix = translateMat(initialHeadMatrix, 0, this.torsoHeight/2 + this.headRadius, 0);
-
-        return initialHeadMatrix;
-    }
-
-    initialize() {
-        // Torso
-        var torsoGeometry = new THREE.CubeGeometry(2*this.torsoRadius, this.torsoHeight, this.torsoRadius, 64);
-        this.torso = new THREE.Mesh(torsoGeometry, this.material);
-
-        // Head
-        var headGeometry = new THREE.CubeGeometry(2*this.headRadius, this.headRadius, this.headRadius);
-        this.head = new THREE.Mesh(headGeometry, this.material);
-
-        // Add parts
-        // TODO
-
-        // Torse transformation
-        this.torsoInitialMatrix = this.initialTorsoMatrix();
-        this.torsoMatrix = idMat4();
-        this.torso.setMatrix(this.torsoInitialMatrix);
-
-        // Head transformation
-        this.headInitialMatrix = this.initialHeadMatrix();
-        this.headMatrix = idMat4();
-        var matrix = multMat(this.torsoInitialMatrix, this.headInitialMatrix);
-        this.head.setMatrix(matrix);
-
-        // Add transformations
-        // TODO
-
-        // Add robot to scene
-        scene.add(this.torso);
-        scene.add(this.head);
-        // Add parts
-        // TODO
-    }
-
-    rotateTorso(angle){
-        var torsoMatrix = this.torsoMatrix;
-
-        this.torsoMatrix = idMat4();
-        this.torsoMatrix = rotateMat(this.torsoMatrix, angle, "y");
-        this.torsoMatrix = multMat(torsoMatrix, this.torsoMatrix);
-
-        var matrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-        this.torso.setMatrix(matrix);
-
-        var matrix2 = multMat(this.headMatrix, this.headInitialMatrix);
-        matrix = multMat(matrix, matrix2);
-        this.head.setMatrix(matrix);
-
-        this.walkDirection = rotateVec3(this.walkDirection, angle, "y");
-    }
-
-    moveTorso(speed){
-        this.torsoMatrix = translateMat(this.torsoMatrix, speed * this.walkDirection.x, speed * this.walkDirection.y, speed * this.walkDirection.z);
-
-        var matrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-        this.torso.setMatrix(matrix);
-
-        var matrix2 = multMat(this.headMatrix, this.headInitialMatrix);
-        matrix = multMat(matrix, matrix2);
-        this.head.setMatrix(matrix);
-    }
-
-    rotateHead(angle){
-        var headMatrix = this.headMatrix;
-
-        this.headMatrix = idMat4();
-        this.headMatrix = rotateMat(this.headMatrix, angle, "y");
-        this.headMatrix = multMat(headMatrix, this.headMatrix);
-
-        var matrix = multMat(this.headMatrix, this.headInitialMatrix);
-        matrix = multMat(this.torsoMatrix, matrix);
-        matrix = multMat(this.torsoInitialMatrix, matrix);
-        this.head.setMatrix(matrix);
-    }
-
-    // Add methods for other parts
+  constructor() {
+    // Geometry
+    this.torsoHeight = 1.5;
+    this.torsoRadius = 0.75;
+    this.headRadius = 0.32;
+    // Add parameters for parts
     // TODO
 
-    look_at(point){
-        // Compute and apply the correct rotation of the head and the torso for the robot to look at @point
-        //TODO
-    }
+    // Animation
+    this.walkDirection = new THREE.Vector3( 0, 0, 1 );
+
+    // Material
+    this.material = new THREE.MeshNormalMaterial();
+
+    // Initial pose
+    this.initialize()
+  }
+
+  initialTorsoMatrix(){
+    var initialTorsoMatrix = idMat4();
+    initialTorsoMatrix = translateMat(initialTorsoMatrix, 0,this.torsoHeight/2, 0);
+
+    return initialTorsoMatrix;
+  }
+
+  initialHeadMatrix(){
+    var initialHeadMatrix = idMat4();
+    initialHeadMatrix = translateMat(initialHeadMatrix, 0, this.torsoHeight/2 + this.headRadius, 0);
+
+    return initialHeadMatrix;
+  }
+
+  initialize() {
+    // Torso
+    var torsoGeometry = new THREE.CubeGeometry(2*this.torsoRadius, this.torsoHeight, this.torsoRadius, 64);
+    this.torso = new THREE.Mesh(torsoGeometry, this.material);
+
+    // Head
+    var headGeometry = new THREE.CubeGeometry(2*this.headRadius, this.headRadius, this.headRadius);
+    this.head = new THREE.Mesh(headGeometry, this.material);
+
+    // Add parts
+    // TODO
+
+    // Torse transformation
+    this.torsoInitialMatrix = this.initialTorsoMatrix();
+    this.torsoMatrix = idMat4();
+    this.torso.setMatrix(this.torsoInitialMatrix);
+
+    // Head transformation
+    this.headInitialMatrix = this.initialHeadMatrix();
+    this.headMatrix = idMat4();
+    var matrix = multMat(this.torsoInitialMatrix, this.headInitialMatrix);
+    this.head.setMatrix(matrix);
+
+    // Add transformations
+    // TODO
+
+	// Add robot to scene
+	scene.add(this.torso);
+    scene.add(this.head);
+    // Add parts
+    // TODO
+  }
+
+  rotateTorso(angle){
+    var torsoMatrix = this.torsoMatrix;
+
+    this.torsoMatrix = idMat4();
+    this.torsoMatrix = rotateMat(this.torsoMatrix, angle, "y");
+    this.torsoMatrix = multMat(torsoMatrix, this.torsoMatrix);
+
+    var matrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
+    this.torso.setMatrix(matrix);
+
+    var matrix2 = multMat(this.headMatrix, this.headInitialMatrix);
+    matrix = multMat(matrix, matrix2);
+    this.head.setMatrix(matrix);
+
+    this.walkDirection = rotateVec3(this.walkDirection, angle, "y");
+  }
+
+  moveTorso(speed){
+    this.torsoMatrix = translateMat(this.torsoMatrix, speed * this.walkDirection.x, speed * this.walkDirection.y, speed * this.walkDirection.z);
+
+    var matrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
+    this.torso.setMatrix(matrix);
+
+    var matrix2 = multMat(this.headMatrix, this.headInitialMatrix);
+    matrix = multMat(matrix, matrix2);
+    this.head.setMatrix(matrix);
+  }
+
+  rotateHead(angle){
+    var headMatrix = this.headMatrix;
+
+    this.headMatrix = idMat4();
+    this.headMatrix = rotateMat(this.headMatrix, angle, "y");
+    this.headMatrix = multMat(headMatrix, this.headMatrix);
+
+    var matrix = multMat(this.headMatrix, this.headInitialMatrix);
+    matrix = multMat(this.torsoMatrix, matrix);
+    matrix = multMat(this.torsoInitialMatrix, matrix);
+    this.head.setMatrix(matrix);
+  }
+
+  // Add methods for other parts
+  // TODO
+
+  look_at(point){
+    // Compute and apply the correct rotation of the head and the torso for the robot to look at @point
+      //TODO
+  }
 }
 
 var robot = new Robot();
@@ -264,10 +277,10 @@ var keyboard = new THREEx.KeyboardState();
 
 var selectedRobotComponent = 0;
 var components = [
-    "Torso",
-    "Head",
-    // Add parts names
-    // TODO
+  "Torso",
+  "Head",
+  // Add parts names
+  // TODO
 ];
 var numberComponents = components.length;
 
@@ -281,88 +294,88 @@ document.addEventListener('mousemove', onMouseMove, false);
 var isRightButtonDown = false;
 
 function checkKeyboard() {
-    // Next element
-    if (keyboard.pressed("e")){
-        selectedRobotComponent = selectedRobotComponent + 1;
+  // Next element
+  if (keyboard.pressed("e")){
+    selectedRobotComponent = selectedRobotComponent + 1;
 
-        if (selectedRobotComponent<0){
-            selectedRobotComponent = numberComponents - 1;
-        }
-
-        if (selectedRobotComponent >= numberComponents){
-            selectedRobotComponent = 0;
-        }
-
-        window.alert(components[selectedRobotComponent] + " selected");
+    if (selectedRobotComponent<0){
+      selectedRobotComponent = numberComponents - 1;
     }
 
-    // Previous element
-    if (keyboard.pressed("q")){
-        selectedRobotComponent = selectedRobotComponent - 1;
-
-        if (selectedRobotComponent < 0){
-            selectedRobotComponent = numberComponents - 1;
-        }
-
-        if (selectedRobotComponent >= numberComponents){
-            selectedRobotComponent = 0;
-        }
-
-        window.alert(components[selectedRobotComponent] + " selected");
+    if (selectedRobotComponent >= numberComponents){
+      selectedRobotComponent = 0;
     }
 
-    // UP
-    if (keyboard.pressed("w")){
-        switch (components[selectedRobotComponent]){
-            case "Torso":
-                robot.moveTorso(0.1);
-                break;
-            case "Head":
-                break;
-            // Add more cases
-            // TODO
-        }
+    window.alert(components[selectedRobotComponent] + " selected");
+  }
+
+  // Previous element
+  if (keyboard.pressed("q")){
+    selectedRobotComponent = selectedRobotComponent - 1;
+
+    if (selectedRobotComponent < 0){
+      selectedRobotComponent = numberComponents - 1;
     }
 
-    // DOWN
-    if (keyboard.pressed("s")){
-        switch (components[selectedRobotComponent]){
-            case "Torso":
-                robot.moveTorso(-0.1);
-                break;
-            case "Head":
-                break;
-            // Add more cases
-            // TODO
-        }
+    if (selectedRobotComponent >= numberComponents){
+      selectedRobotComponent = 0;
     }
 
-    // LEFT
-    if (keyboard.pressed("a")){
-        switch (components[selectedRobotComponent]){
-            case "Torso":
-                robot.rotateTorso(0.1);
-                break;
-            case "Head":
-                robot.rotateHead(0.1);
-                break;
-            // Add more cases
-            // TODO
-        }
-    }
+    window.alert(components[selectedRobotComponent] + " selected");
+  }
 
-    // RIGHT
-    if (keyboard.pressed("d")){
-        switch (components[selectedRobotComponent]){
-            case "Torso":
-                robot.rotateTorso(-0.1);
-                break;
-            case "Head":
-                robot.rotateHead(-0.1);
-                break;
-            // Add more cases
-            // TODO
-        }
+  // UP
+  if (keyboard.pressed("w")){
+    switch (components[selectedRobotComponent]){
+      case "Torso":
+        robot.moveTorso(0.1);
+        break;
+      case "Head":
+        break;
+      // Add more cases
+      // TODO
+    }
+  }
+
+  // DOWN
+  if (keyboard.pressed("s")){
+    switch (components[selectedRobotComponent]){
+      case "Torso":
+        robot.moveTorso(-0.1);
+        break;
+      case "Head":
+        break;
+      // Add more cases
+      // TODO
+    }
+  }
+
+  // LEFT
+  if (keyboard.pressed("a")){
+    switch (components[selectedRobotComponent]){
+      case "Torso":
+        robot.rotateTorso(0.1);
+        break;
+      case "Head":
+        robot.rotateHead(0.1);
+        break;
+      // Add more cases
+      // TODO
+    }
+  }
+
+  // RIGHT
+  if (keyboard.pressed("d")){
+    switch (components[selectedRobotComponent]){
+      case "Torso":
+        robot.rotateTorso(-0.1);
+        break;
+      case "Head":
+        robot.rotateHead(-0.1);
+        break;
+      // Add more cases
+      // TODO
+    }
     }
 
     if (keyboard.pressed("f")) {
@@ -432,9 +445,9 @@ function updateLookAtPosition() {
 
 // SETUP UPDATE CALL-BACK
 function update() {
-    checkKeyboard();
-    requestAnimationFrame(update);
-    renderer.render(scene, camera);
+  checkKeyboard();
+  requestAnimationFrame(update);
+  renderer.render(scene, camera);
 }
 
 update();
