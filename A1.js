@@ -164,6 +164,7 @@ class Robot {
         this.torsoHeight = 1.5;
         this.torsoRadius = 0.75;
         this.torsoElevation = 0;
+        this.torsoMoveDistance = 0;
         this.headRadius = 0.32;
 
         this.armRadius = 0.03;
@@ -520,7 +521,51 @@ class Robot {
     }
 
     moveTorso(speed){
+        speed /= 2;
+
         this.torsoMatrix = translateMat(this.torsoMatrix, speed * this.walkDirection.x, speed * this.walkDirection.y, speed * this.walkDirection.z);
+
+        var movementUnitDuration = 0.05;
+        var maxWalkCycleUnits = 80;
+
+        var addedMovementUnits = Math.floor(speed/movementUnitDuration);
+
+        this.torsoMoveDistance += addedMovementUnits;
+
+        this.walkCycleDistance = this.torsoMoveDistance % maxWalkCycleUnits;
+
+        if (this.walkCycleDistance !== 0 && Math.sign(this.walkCycleDistance) === -1) {
+            this.walkCycleDistance = maxWalkCycleUnits + this.walkCycleDistance;
+        }
+
+        var leftLegRotation = 0;
+        var leftLowerLegRotation = 0;
+        var rightLegRotation = 0;
+        var rightLowerLegRotation = 0;
+
+        if (0 <= this.walkCycleDistance && this.walkCycleDistance < 20) {
+            leftLegRotation = 0.0175;
+            rightLegRotation = -0.005;
+            rightLowerLegRotation = -0.01;
+        } else if (20 <= this.walkCycleDistance && this.walkCycleDistance < 40) {
+            leftLegRotation = -0.01;
+            leftLowerLegRotation = -0.01;
+        } else if (40 <= this.walkCycleDistance && this.walkCycleDistance < 60) {
+            leftLegRotation = -0.015;
+            leftLowerLegRotation = 0.015;
+            rightLegRotation = 0.0125;
+            rightLowerLegRotation = 0.0175;
+        } else if (60 <= this.walkCycleDistance && this.walkCycleDistance < 80) {
+            leftLegRotation = 0.0075;
+            leftLowerLegRotation = -0.005;
+            rightLegRotation = -0.01;
+            rightLowerLegRotation = -0.005;
+        }
+
+        this.rotateLeftLeg(Math.sign(speed) * -Math.PI * leftLegRotation, "x");
+        this.rotateLeftLowerLeg(Math.sign(speed) * -Math.PI * leftLowerLegRotation, "x");
+        this.rotateRightLeg(Math.sign(speed) * -Math.PI * rightLegRotation, "x");
+        this.rotateRightLowerLeg(Math.sign(speed) * -Math.PI * rightLowerLegRotation, "x");
 
         this.updateRobot();
     }
