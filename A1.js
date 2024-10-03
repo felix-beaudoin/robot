@@ -614,7 +614,7 @@ class Robot {
     look_at(point) {
         // Compute and apply the correct rotation of the head and the torso for the robot to look at @point
         var newWalkDirection = new THREE.Vector3(point.x - this.torso.matrix.elements[12], 0, point.z - this.torso.matrix.elements[14]);
-        var i = 10;
+        var i = 100;
         while ((i !== 0)) {
             var d = this.dotProduct(this.walkDirection.normalize(), newWalkDirection.normalize());
             var angle = Math.acos(d)
