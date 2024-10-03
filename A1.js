@@ -163,6 +163,7 @@ class Robot {
         // Geometry
         this.torsoHeight = 1.5;
         this.torsoRadius = 0.75;
+        this.torsoElevation = 0;
         this.headRadius = 0.32;
 
         this.armRadius = 0.03;
@@ -189,10 +190,7 @@ class Robot {
     }
 
     initialTorsoMatrix() {
-        var initialTorsoMatrix = idMat4();
-        initialTorsoMatrix = translateMat(initialTorsoMatrix, 0, this.torsoHeight / 2, 0);
-
-        return initialTorsoMatrix;
+        return idMat4();
     }
 
     initialHeadMatrix() {
@@ -320,6 +318,32 @@ class Robot {
         return absoluteLowerLegMatrix;
     }
 
+    getTorsoHeightMatrix() {
+        var absoluteLeftLegMatrix = multMat(this.leftLegMatrix, this.initialLegMatrix());
+        var absoluteRightLegMatrix = multMat(this.rightLegMatrix, this.initialLegMatrix());
+
+        var halfLowerLegTranslateMat = translateMat(idMat4(), 0, -this.lowerLegHeight, 0);
+        var relativeLeftLowerLegMatrix = multMat(this.leftLowerLegMatrix, multMat(this.lowerLegInitialMatrix, halfLowerLegTranslateMat));
+        var absoluteLeftLowerLegMatrix = multMat(absoluteLeftLegMatrix, relativeLeftLowerLegMatrix);
+        var absoluteLeftLowerLegMatrixScaled = multMat(absoluteLeftLowerLegMatrix, this.lowerLegRescaleMatrix());
+
+        var relativeRightLowerLegMatrix = multMat(this.rightLowerLegMatrix, multMat(this.lowerLegInitialMatrix, halfLowerLegTranslateMat));
+        var absoluteRightLowerLegMatrix = multMat(absoluteRightLegMatrix, relativeRightLowerLegMatrix);
+        var absoluteRightLowerLegMatrixScaled = multMat(absoluteRightLowerLegMatrix, this.lowerLegRescaleMatrix());
+
+        var leftLegVector = new THREE.Vector3(0, 0, 0);
+        leftLegVector.applyMatrix4(absoluteLeftLowerLegMatrixScaled);
+
+        var rightLegVector = new THREE.Vector3(0, 0, 0);
+        rightLegVector.applyMatrix4(absoluteRightLowerLegMatrixScaled);
+
+        var elevation = -Math.min(leftLegVector.y, rightLegVector.y);
+        var heightDifference = elevation - this.torsoElevation;
+        this.torsoElevation += heightDifference;
+
+        return translateMat(idMat4(), 0, heightDifference, 0);
+    }
+
     initialize() {
         // Torso
         var torsoGeometry = new THREE.CubeGeometry(2 * this.torsoRadius, this.torsoHeight, this.torsoRadius, 64);
@@ -364,27 +388,49 @@ class Robot {
         this.rightLowerLeg = new THREE.Mesh(lowerLegGeometry, this.material);
 
 
-        // Torse transformation
+        // Torso initial matrix setup
         this.torsoInitialMatrix = this.initialTorsoMatrix();
         this.torsoMatrix = idMat4();
-        this.torso.setMatrix(this.torsoInitialMatrix);
+
+        // Left leg matrix calculation
+        this.leftLegInitialMatrix = this.initialLegMatrix();
+        this.leftLegMatrix = idMat4();
+        this.leftLegMatrix = translateMat(this.leftLegMatrix, this.torsoRadius/2 + this.legRadius/2, -this.torsoHeight/2, 0);
+
+        // Right leg matrix calculation
+        this.rightLegInitialMatrix = this.initialLegMatrix();
+        this.rightLegMatrix = idMat4();
+        this.rightLegMatrix = translateMat(this.rightLegMatrix, -this.torsoRadius/2 - this.legRadius/2, -this.torsoHeight/2, 0);
+
+        // Lower leg matrix calculation
+        this.lowerLegInitialMatrix = this.initialLowerLegMatrix();
+        this.lowerLegMatrix = idMat4();
+        this.lowerLegMatrix = translateMat(this.lowerLegMatrix, 0, -this.legHeight + this.lowerLegKneeJointRatio * this.lowerLegHeight, 0);
+
+        this.leftLowerLegMatrix = this.lowerLegMatrix;
+        this.rightLowerLegMatrix = this.lowerLegMatrix;
+
+        // Torso elevation with respect to the legs
+        this.torsoMatrix = multMat(this.getTorsoHeightMatrix(), this.torsoMatrix);
+        this.absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
+        this.torso.setMatrix(this.absoluteTorsoMatrix);
 
         // Head transformation
         this.headInitialMatrix = this.initialHeadMatrix();
         this.headMatrix = idMat4();
-        var matrix = multMat(this.torsoInitialMatrix, this.headInitialMatrix);
+        var matrix = multMat(this.absoluteTorsoMatrix, this.headInitialMatrix);
         this.head.setMatrix(matrix);
 
         // left arm:
         this.leftArmInitialMatrix = this.initialLeftArmMatrix();
         this.leftArmMatrix = idMat4();
-        matrix = multMat(this.torsoInitialMatrix, this.leftArmInitialMatrix);
+        matrix = multMat(this.absoluteTorsoMatrix, this.leftArmInitialMatrix);
         this.leftArm.setMatrix(matrix);
 
         // right arm:
         this.rightArmInitialMatrix = this.initialRightArmMatrix();
         this.rightArmMatrix = idMat4();
-        matrix = multMat(this.torsoInitialMatrix, this.rightArmInitialMatrix);
+        matrix = multMat(this.absoluteTorsoMatrix, this.rightArmInitialMatrix);
         this.rightArm.setMatrix(matrix);
 
         // left forearm:
@@ -399,26 +445,12 @@ class Robot {
 
 
         // Left leg transformation
-        this.leftLegInitialMatrix = this.initialLegMatrix();
-        this.leftLegMatrix = idMat4();
-        this.leftLegMatrix = translateMat(this.leftLegMatrix, this.torsoRadius / 2 + this.legRadius / 2, -this.torsoHeight / 2, 0);
-
-        var absoluteLeftLegMatrix = this.setLeg(this.torsoInitialMatrix, "left");
+        var absoluteLeftLegMatrix = this.setLeg(this.absoluteTorsoMatrix, "left");
 
         // Right leg transformation
-        this.rightLegInitialMatrix = this.initialLegMatrix();
-        this.rightLegMatrix = idMat4();
-        this.rightLegMatrix = translateMat(this.rightLegMatrix, -this.torsoRadius / 2 - this.legRadius / 2, -this.torsoHeight / 2, 0);
+        var absoluteRightLegMatrix = this.setLeg(this.absoluteTorsoMatrix, "right");
 
-        var absoluteRightLegMatrix = this.setLeg(this.torsoInitialMatrix, "right");
-
-        // Lower leg transformation
-        this.lowerLegInitialMatrix = this.initialLowerLegMatrix();
-        this.lowerLegMatrix = idMat4();
-        this.lowerLegMatrix = translateMat(this.lowerLegMatrix, 0, -this.legHeight + this.lowerLegKneeJointRatio * this.lowerLegHeight, 0);
-
-        this.leftLowerLegMatrix = this.lowerLegMatrix;
-        this.rightLowerLegMatrix = this.lowerLegMatrix;
+        // Lower leg transformations
 
         this.setLowerLeg(absoluteLeftLegMatrix, "left");
         this.setLowerLeg(absoluteRightLegMatrix, "right");
@@ -440,12 +472,8 @@ class Robot {
         scene.add(this.rightLowerLeg);
     }
 
-    rotateTorso(angle) {
-        var torsoMatrix = this.torsoMatrix;
-
-        this.torsoMatrix = idMat4();
-        this.torsoMatrix = rotateMat(this.torsoMatrix, angle, "y");
-        this.torsoMatrix = multMat(torsoMatrix, this.torsoMatrix);
+    updateRobot() {
+        this.torsoMatrix = multMat(this.getTorsoHeightMatrix(), this.torsoMatrix);
 
         var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
         this.torso.setMatrix(absoluteTorsoMatrix);
@@ -475,41 +503,26 @@ class Robot {
         this.setLowerLeg(absoluteLeftLegMatrix, "left");
         var absoluteRightLegMatrix = this.setLeg(absoluteTorsoMatrix, "right");
         this.setLowerLeg(absoluteRightLegMatrix, "right");
+    }
+
+    rotateTorso(angle) {
+        var torsoMatrix = this.torsoMatrix;
+
+        this.torsoMatrix = idMat4();
+        this.torsoMatrix = rotateMat(this.torsoMatrix, angle, "y");
+        this.torsoMatrix = multMat(torsoMatrix, this.torsoMatrix);
+
+        this.updateRobot();
+
         this.walkDirection = rotateVec3(this.walkDirection, angle, "y");
 
         console.log(this.torsoMatrix);
     }
 
-    moveTorso(speed) {
+    moveTorso(speed){
         this.torsoMatrix = translateMat(this.torsoMatrix, speed * this.walkDirection.x, speed * this.walkDirection.y, speed * this.walkDirection.z);
 
-        var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-        this.torso.setMatrix(absoluteTorsoMatrix);
-
-        var relativeHeadMatrix = multMat(this.headMatrix, this.headInitialMatrix);
-        var absoluteHeadMatrix = multMat(absoluteTorsoMatrix, relativeHeadMatrix);
-        this.head.setMatrix(absoluteHeadMatrix);
-
-        var relativeLeftArmMatrix = multMat(this.leftArmMatrix, this.leftArmInitialMatrix);
-        var absoluteLeftArmMatrix = multMat(absoluteTorsoMatrix, relativeLeftArmMatrix);
-        this.leftArm.setMatrix(absoluteLeftArmMatrix);
-
-        var relativeRightArmMatrix = multMat(this.rightArmMatrix, this.rightArmInitialMatrix);
-        var absoluteRightArmMatrix = multMat(absoluteTorsoMatrix, relativeRightArmMatrix);
-        this.rightArm.setMatrix(absoluteRightArmMatrix);
-
-        var relativeLeftForearmMatrix = multMat(this.leftForearmMatrix, this.leftForearmInitialMatrix);
-        var absoluteLeftForearmMatrix = multMat(absoluteTorsoMatrix, relativeLeftForearmMatrix);
-        this.leftForearm.setMatrix(absoluteLeftForearmMatrix);
-
-
-        var absoluteLeftLegMatrix = this.setLeg(absoluteTorsoMatrix, "left");
-
-        this.setLowerLeg(absoluteLeftLegMatrix, "left");
-
-        var absoluteRightLegMatrix = this.setLeg(absoluteTorsoMatrix, "right");
-
-        this.setLowerLeg(absoluteRightLegMatrix, "right");
+        this.updateRobot();
     }
 
     rotateHead(angle) {
@@ -529,13 +542,11 @@ class Robot {
     // TODO
 
     rotateLeftLeg(angle, axis) {
-        this.leftLegRotationMatrix = rotateMat(idMat4(), angle, axis);
+        this.leftLegRotationMatrix = idMat4();
+        this.leftLegRotationMatrix = rotateMat(this.leftLegRotationMatrix, angle, axis);
         this.leftLegMatrix = multMat(this.leftLegMatrix, this.leftLegRotationMatrix);
 
-        var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix) // world torso matrix
-        var absoluteLeftLegMatrix = this.setLeg(absoluteTorsoMatrix, "left");
-
-        this.setLowerLeg(absoluteLeftLegMatrix, "left");
+        this.updateRobot();
     }
 
     rotateLeftLowerLeg(angle, axis) {
@@ -543,11 +554,7 @@ class Robot {
         this.leftLowerLegRotationMatrix = rotateMat(this.leftLowerLegRotationMatrix, angle, axis);
         this.leftLowerLegMatrix = multMat(this.leftLowerLegMatrix, this.leftLowerLegRotationMatrix);
 
-        var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-
-        var absoluteLeftLegMatrix = this.setLeg(absoluteTorsoMatrix, "left");
-
-        this.setLowerLeg(absoluteLeftLegMatrix, "left");
+        this.updateRobot();
     }
 
     rotateRightLeg(angle, axis) {
@@ -555,11 +562,7 @@ class Robot {
         this.rightLegRotationMatrix = rotateMat(this.rightLegRotationMatrix, angle, axis);
         this.rightLegMatrix = multMat(this.rightLegMatrix, this.rightLegRotationMatrix);
 
-        var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-
-        var absoluteRightLegMatrix = this.setLeg(absoluteTorsoMatrix, "right");
-
-        this.setLowerLeg(absoluteRightLegMatrix, "right");
+        this.updateRobot();
     }
 
     rotateRightLowerLeg(angle, axis) {
@@ -567,11 +570,7 @@ class Robot {
         this.rightLowerLegRotationMatrix = rotateMat(this.rightLowerLegRotationMatrix, angle, axis);
         this.rightLowerLegMatrix = multMat(this.rightLowerLegMatrix, this.rightLowerLegRotationMatrix);
 
-        var absoluteTorsoMatrix = multMat(this.torsoMatrix, this.torsoInitialMatrix);
-
-        var absoluteRightLegMatrix = this.setLeg(absoluteTorsoMatrix, "right");
-
-        this.setLowerLeg(absoluteRightLegMatrix, "right");
+        this.updateRobot();
     }
 
     rotateLeftArm(angle, axis) {
