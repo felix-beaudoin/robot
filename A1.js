@@ -556,10 +556,10 @@ class Robot {
             rightLegRotation = 0.0125;
             rightLowerLegRotation = 0.0175;
         } else if (60 <= this.walkCycleDistance && this.walkCycleDistance < 80) {
-            leftLegRotation = 0.0075;
-            leftLowerLegRotation = -0.005;
-            rightLegRotation = -0.01;
-            rightLowerLegRotation = -0.005;
+            leftLegRotation = -(0.0175 - 0.01 - 0.015);
+            leftLowerLegRotation = -(-0.01 + 0.015);
+            rightLegRotation = -(-0.005 + 0.0125);
+            rightLowerLegRotation = -(-0.01 + 0.0175);
         }
 
         this.rotateLeftLeg(Math.sign(speed) * -Math.PI * leftLegRotation, "x");
