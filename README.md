@@ -5,7 +5,7 @@
 The objective of this project is to develop a 3D robot scene from scratch:
 
     Creating transformation matrices for scaling, rotation and translation
-    Putting up a hierarchy between the body members (the arms follow the torso -> the forearm follows the arms -> etc.)
+    Putting up a hierarchy between the body members
     Animating a walking animation
     
 ![Robot](https://github.com/felix-beaudoin/robot/blob/master/robot.png)
